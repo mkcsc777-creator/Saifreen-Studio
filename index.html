@@ -1,22 +1,347 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#111827"><title>PhotoCloud — Studio Manager</title>
-<link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>सैफरीन डिजिटल स्टूडियो - डैशबोर्ड</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printable-invoice, #printable-invoice * { visibility: visible; }
+      #printable-invoice { position: absolute; left: 0; top: 0; width: 100%; }
+    }
+  </style>
 </head>
-<body>
-<section id="configScreen" class="auth-wrap hidden"><div class="auth-card"><div class="logo">📸 PhotoCloud</div><h1>Connect your cloud</h1><p class="muted">Supabase Project URL और Publishable/anon key डालें। ये जानकारी आपके Supabase Dashboard में मिलती है।</p><form id="configForm" class="stack"><label>Supabase Project URL<input id="projectUrl" type="url" placeholder="https://xxxx.supabase.co" required></label><label>Publishable / anon key<textarea id="anonKey" rows="3" placeholder="sb_publishable_... या पुरानी anon key" required></textarea></label><button class="primary" type="submit">Connect</button></form><p class="tiny">यह key ब्राउज़र में इस्तेमाल के लिए होती है। Secret या service_role key यहाँ न डालें।</p><div id="configMessage" class="message"></div></div></section>
-<section id="authScreen" class="auth-wrap hidden"><div class="auth-card"><div class="logo">📸 PhotoCloud</div><h1>Studio Login</h1><p class="muted">अपने स्टूडियो के ग्राहक और बुकिंग सुरक्षित रूप से मैनेज करें।</p>
-<div class="tabs"><button type="button" class="tab active" data-auth="email">Email</button><button type="button" class="tab" data-auth="phone">Mobile OTP</button></div>
-<form id="emailAuthForm" class="stack"><label>Email<input id="authEmail" type="email" autocomplete="username" placeholder="you@example.com" required></label><label>Password<input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="कम से कम 6 अक्षर" required></label><div class="button-row"><button class="primary" type="submit" id="emailLoginBtn">Login</button><button class="secondary" type="button" id="emailSignupBtn">Create account</button></div></form>
-<form id="phoneAuthForm" class="stack hidden"><label>Mobile number (country code सहित)<input id="authPhone" type="tel" placeholder="+919876543210" required></label><button class="primary" type="submit" id="sendOtpBtn">OTP भेजें</button><label id="otpLabel" class="hidden">OTP<input id="authOtp" inputmode="numeric" autocomplete="one-time-code" placeholder="SMS में आया OTP"></label><button id="verifyOtpBtn" type="button" class="secondary hidden">OTP Verify करें</button><p class="tiny">Mobile OTP के लिए Supabase में Phone Auth और SMS provider चालू होना चाहिए।</p></form><button id="changeConfigBtn" type="button" class="linkbtn">Change Supabase connection</button><div id="authMessage" class="message" role="status"></div></div></section>
-<section id="setupScreen" class="auth-wrap hidden"><div class="auth-card"><div class="logo">📸 PhotoCloud</div><h1 id="setupTitle">Studio सेटअप</h1><p class="muted" id="setupDescription">पहले स्टूडियो का नाम डालें।</p><form id="createStudioForm" class="stack"><label>Studio / Business Name<input id="studioName" required placeholder="जैसे Raja Photo Studio"></label><button class="primary" type="submit">Create Studio (Owner)</button></form><div class="or">या स्टाफ के रूप में जुड़ें</div><form id="joinStudioForm" class="stack"><label>Owner का Staff Join Code<input id="joinCode" required placeholder="Owner से मिला code"></label><button class="secondary" type="submit">Join Studio (Staff)</button></form><button id="setupLogout" class="linkbtn">Logout</button><div id="setupMessage" class="message"></div></div></section>
-<div id="appShell" class="app hidden"><aside class="sidebar"><div class="brand">📸 <span>PhotoCloud</span></div><div class="studio-chip" id="studioBadge">Studio</div><button class="nav active" data-page="dashboard">🏠 Dashboard</button><button class="nav" data-page="customers">👤 Customers</button><button class="nav" data-page="booking">📅 New Booking</button><button class="nav" data-page="bookings">📋 Bookings</button><div class="sidebar-bottom"><span id="userRole" class="role-pill">Member</span><button id="logoutBtn" class="nav">↪ Logout</button></div></aside>
-<main class="main"><header class="topbar"><div><h1 id="pageTitle">Dashboard</h1><p>Photography & Videography Customer Management</p></div><button class="primary" onclick="showPage('booking')">+ New Booking</button></header>
-<section id="dashboard" class="page active"><div class="cards"><div class="card"><span>👥</span><small>Total Customers</small><strong id="customerCount">0</strong></div><div class="card"><span>📅</span><small>Total Bookings</small><strong id="bookingCount">0</strong></div><div class="card"><span>💰</span><small>Advance Received</small><strong id="advanceTotal">₹0</strong></div><div class="card"><span>⏳</span><small>Pending Amount</small><strong id="pendingTotal">₹0</strong></div></div><div class="panel"><div class="panel-head"><h2>Upcoming Bookings</h2><button class="linkbtn" onclick="showPage('bookings')">View All</button></div><div id="upcoming"></div></div><div class="panel" id="staffPanel"><div class="panel-head"><h2>Staff Access</h2></div><p class="muted">यह join code केवल अपने भरोसेमंद स्टाफ को दें। कोड पाने वाला लॉगिन किया हुआ व्यक्ति इस स्टूडियो से जुड़ सकता है।</p><div class="code-row"><code id="inviteCode">—</code><button class="secondary" id="copyCodeBtn">Copy join code</button><button class="secondary" id="refreshCodeBtn">New code</button></div><p class="tiny">नया कोड बनाने पर पुराना कोड बंद हो जाएगा।</p></div></section>
-<section id="customers" class="page"><div class="panel"><div class="panel-head"><h2>Add Customer</h2></div><form id="customerForm" class="grid"><input id="cName" required placeholder="Customer Name"><input id="cPhone" required placeholder="Mobile Number"><input id="cAddress" placeholder="Address"><input id="cWhatsapp" placeholder="WhatsApp Number"><button class="primary" type="submit">Save Customer</button></form></div><div class="panel"><h2>Customer List</h2><input id="customerSearch" class="search" placeholder="नाम या मोबाइल से खोजें"><div id="customerList"></div></div></section>
-<section id="booking" class="page"><div class="panel"><div class="panel-head"><h2>New Booking</h2></div><form id="bookingForm" class="grid"><select id="bCustomer" required><option value="">Select Customer</option></select><input id="bDate" type="date" required><select id="bType" required><option value="">Event Type</option><option>Wedding</option><option>Engagement</option><option>Birthday</option><option>Pre-Wedding</option><option>Rice Ceremony</option><option>Other</option></select><input id="bPackage" placeholder="Package / Service"><input id="bTotal" type="number" min="0" step="0.01" placeholder="Total Amount ₹" required><input id="bAdvance" type="number" min="0" step="0.01" placeholder="Advance ₹" required><input id="bNote" class="full" placeholder="Special Note"><button class="primary" type="submit">Save Booking</button></form></div></section>
-<section id="bookings" class="page"><div class="panel"><div class="panel-head"><h2>All Bookings</h2></div><input id="bookingSearch" class="search" placeholder="Customer, event या date से खोजें"><div id="bookingList"></div></div></section>
-</main></div><div id="toast" class="toast" aria-live="polite"></div><script src="script.js"></script></body></html>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+  <!-- Header -->
+  <header class="bg-indigo-900 text-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <i class="fa-solid font-bold text-2xl text-yellow-400 fa-camera-retro"></i>
+        <div>
+          <h1 class="text-xl font-bold tracking-wide">सैफरीन डिजिटल स्टूडियो</h1>
+          <p class="text-xs text-indigo-200">Bachhgaon Chauraha, Narkhi Road, Firozabad</p>
+        </div>
+      </div>
+      <div class="text-right text-xs">
+        <p class="font-semibold text-yellow-300"><i class="fa-solid fa-phone"></i> Contact: +91 9876543210</p>
+        <p class="text-indigo-200">Epson L8180 & HP M1005 Station</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="bg-indigo-800 text-white">
+    <div class="max-w-7xl mx-auto px-4 flex space-x-2 overflow-x-auto py-2">
+      <button onclick="showTab('dashboard')" class="tab-btn px-4 py-2 rounded bg-indigo-700 font-medium hover:bg-indigo-600 transition flex items-center space-x-2"><i class="fa-solid fa-chart-line"></i> <span>डैशबोर्ड</span></button>
+      <button onclick="showTab('bookings')" class="tab-btn px-4 py-2 rounded hover:bg-indigo-700 font-medium transition flex items-center space-x-2"><i class="fa-solid fa-calendar-check"></i> <span>बुकिंग लिस्ट</span></button>
+      <button onclick="showTab('new-booking')" class="tab-btn px-4 py-2 rounded hover:bg-indigo-700 font-medium transition flex items-center space-x-2"><i class="fa-solid fa-plus-circle"></i> <span>नई बुकिंग</span></button>
+      <button onclick="showTab('rates')" class="tab-btn px-4 py-2 rounded hover:bg-indigo-700 font-medium transition flex items-center space-x-2"><i class="fa-solid fa-list-check"></i> <span>रेट लिस्ट</span></button>
+      <button onclick="showTab('expenses')" class="tab-btn px-4 py-2 rounded hover:bg-indigo-700 font-medium transition flex items-center space-x-2"><i class="fa-solid fa-wallet"></i> <span>ख़र्चा (Expenses)</span></button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- Dashboard Tab -->
+    <div id="tab-dashboard" class="tab-content space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-lg shadow border-l-4 border-indigo-600">
+          <p class="text-xs font-bold text-gray-500 uppercase">कुल बुकिंग्स</p>
+          <h3 id="stat-total-bookings" class="text-2xl font-extrabold text-indigo-900 mt-1">0</h3>
+        </div>
+        <div class="bg-white p-5 rounded-lg shadow border-l-4 border-yellow-500">
+          <p class="text-xs font-bold text-gray-500 uppercase">एडिटिंग जारी (Active)</p>
+          <h3 id="stat-editing" class="text-2xl font-extrabold text-yellow-600 mt-1">0</h3>
+        </div>
+        <div class="bg-white p-5 rounded-lg shadow border-l-4 border-green-600">
+          <p class="text-xs font-bold text-gray-500 uppercase">कुल आय (Received)</p>
+          <h3 id="stat-income" class="text-2xl font-extrabold text-green-700 mt-1">₹0</h3>
+        </div>
+        <div class="bg-white p-5 rounded-lg shadow border-l-4 border-red-500">
+          <p class="text-xs font-bold text-gray-500 uppercase">कुल बकाया (Pending)</p>
+          <h3 id="stat-pending" class="text-2xl font-extrabold text-red-600 mt-1">₹0</h3>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-clock-rotate-left"></i> हालिया बुकिंग्स</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-gray-100 text-xs font-semibold text-gray-600">
+                <th class="p-3">क्लाइंट नाम</th>
+                <th class="p-3">सर्विस/इवेंट</th>
+                <th class="p-3">तारीख</th>
+                <th class="p-3">कुल राशि</th>
+                <th class="p-3">बकाया</th>
+                <th class="p-3">स्टेटस</th>
+              </tr>
+            </thead>
+            <tbody id="recent-bookings-list" class="divide-y text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bookings Tab -->
+    <div id="tab-bookings" class="tab-content hidden space-y-4">
+      <div class="flex justify-between items-center bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-bold">सभी ग्राहक बुकिंग्स</h2>
+        <button onclick="showTab('new-booking')" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700 font-medium">+ नई बुकिंग जोड़ें</button>
+      </div>
+      <div class="bg-white rounded-lg shadow overflow-x-auto">
+        <table class="w-full text-left">
+          <tr class="bg-gray-100 text-xs text-gray-600 font-semibold border-b">
+            <th class="p-3">ID</th>
+            <th class="p-3">नाम व मोबाइल</th>
+            <th class="p-3">इवेंट</th>
+            <th class="p-3">तारीख</th>
+            <th class="p-3">कुल</th>
+            <th class="p-3">एडवांस</th>
+            <th class="p-3">बकाया</th>
+            <th class="p-3">स्टेटस</th>
+            <th class="p-3">ऐक्शन</th>
+          </tr>
+          <tbody id="all-bookings-list" class="divide-y text-sm"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- New Booking Tab -->
+    <div id="tab-new-booking" class="tab-content hidden max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
+      <h2 class="text-xl font-bold border-b pb-3 mb-4 text-indigo-900">नई कस्टमर बुकिंग दर्ज करें</h2>
+      <form id="booking-form" onsubmit="saveBooking(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">ग्राहक का नाम *</label>
+          <input type="text" id="cust-name" required class="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" placeholder="उदा. राहुल शर्मा">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">मोबाइल नंबर *</label>
+            <input type="tel" id="cust-phone" required class="w-full border rounded px-3 py-2 text-sm" placeholder="9876543210">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">इवेंट/शूट की तारीख *</label>
+            <input type="date" id="cust-date" required class="w-full border rounded px-3 py-2 text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">इवेंट का प्रकार / सर्विस *</label>
+          <select id="cust-service" class="w-full border rounded px-3 py-2 text-sm">
+            <option>शादी (Full Wedding Package)</option>
+            <option>प्री-वेडिंग शूट (Pre-Wedding)</option>
+            <option>मॉडलिंग पोर्टफोलियो (Portfolio)</option>
+            <option>पासपोर्ट फोटो (Passport Photo)</option>
+            <option>वीडियो एडिटिंग (Video Editing)</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">कुल राशि (Total ₹) *</label>
+            <input type="number" id="cust-total" oninput="calcBalance()" required class="w-full border rounded px-3 py-2 text-sm" placeholder="45000">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">एडवांस भुगतान (Paid ₹)</label>
+            <input type="number" id="cust-advance" oninput="calcBalance()" value="0" class="w-full border rounded px-3 py-2 text-sm" placeholder="15000">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">बकाया राशि (Balance ₹)</label>
+          <input type="number" id="cust-balance" readonly class="w-full bg-gray-100 border rounded px-3 py-2 text-sm font-bold text-red-600" value="0">
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 rounded hover:bg-indigo-700">बुकिंग सेव करें</button>
+      </form>
+    </div>
+
+    <!-- Rates Tab -->
+    <div id="tab-rates" class="tab-content hidden space-y-4">
+      <div class="bg-white p-4 rounded shadow flex justify-between items-center">
+        <h2 class="text-lg font-bold">सर्विस रेट कार्ड (Rate List)</h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="rate-list-container"></div>
+    </div>
+
+    <!-- Expenses Tab -->
+    <div id="tab-expenses" class="tab-content hidden space-y-4 max-w-xl mx-auto">
+      <div class="bg-white p-6 rounded shadow space-y-4">
+        <h2 class="text-lg font-bold border-b pb-2">दैनिक ख़र्चा जोड़ें (Studio Expense)</h2>
+        <form onsubmit="addExpense(event)" class="space-y-3">
+          <input type="text" id="exp-title" placeholder="विवरण (उदा. Epson Glossy Paper)" required class="w-full border rounded px-3 py-2 text-sm">
+          <input type="number" id="exp-amount" placeholder="राशि (₹)" required class="w-full border rounded px-3 py-2 text-sm">
+          <button type="submit" class="w-full bg-red-600 text-white font-bold py-2 rounded hover:bg-red-700">ख़र्चा दर्ज करें</button>
+        </form>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="font-bold text-sm mb-2 border-b pb-1">ख़र्चों की सूची</h3>
+        <ul id="expense-ul" class="divide-y text-sm"></ul>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Invoice Modal -->
+  <div id="invoice-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 space-y-4" id="printable-invoice">
+      <div class="text-center border-b pb-3">
+        <h2 class="text-2xl font-black text-indigo-900">सैफरीन डिजिटल स्टूडियो</h2>
+        <p class="text-xs text-gray-600">Bachhgaon Chauraha, Narkhi Road, Firozabad (UP)</p>
+        <p class="text-xs text-gray-600">Mob: +91 9876543210</p>
+      </div>
+      <div class="text-xs space-y-1" id="invoice-details"></div>
+      <div class="flex justify-between border-t pt-3">
+        <button onclick="window.print()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold">🖨️ प्रिंट रसीद</button>
+        <button onclick="closeInvoice()" class="bg-gray-500 text-white px-4 py-2 rounded text-sm">बंद करें</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const defaultBookings = [
+      { id: 101, name: 'राहुल शर्मा', phone: '9876543210', service: 'शादी (Full Wedding)', date: '2026-11-25', total: 45000, advance: 15000, balance: 30000, status: 'Editing' },
+      { id: 102, name: 'अमित वर्मा', phone: '9123456789', service: 'प्री-वेडिंग शूट', date: '2026-10-30', total: 18000, advance: 8000, balance: 10000, status: 'Pending' },
+      { id: 103, name: 'प्रिया सिंह', phone: '9988776655', service: 'मॉडलिंग पोर्टफोलियो', date: '2026-10-20', total: 3500, advance: 3500, balance: 0, status: 'Delivered' }
+    ];
+
+    const defaultRates = [
+      { name: 'पासपोर्ट फोटो', price: '₹100', desc: '8 प्रिंट्स + डिजिटल कॉपी' },
+      { name: 'मॉडलिंग पोर्टफोलियो', price: '₹3,500', desc: '10 एडिटेड फोटोज़ + 1 रील' },
+      { name: 'प्री-वेडिंग शूट', price: '₹18,000', desc: '1 दिन का शूट + सिनेमैटिक टीज़र' },
+      { name: 'फुल वेडिंग पैकेज', price: '₹55,000', desc: '2 दिन फोटोग्राफी + 4K वीडियो + एल्बम' }
+    ];
+
+    let bookings = JSON.parse(localStorage.getItem('studio_bookings')) || defaultBookings;
+    let expenses = JSON.parse(localStorage.getItem('studio_expenses')) || [
+      { title: 'Epson Glossy Paper', amount: 1200 },
+      { title: 'बिजली का बिल', amount: 2500 }
+    ];
+
+    function showTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+      renderAll();
+    }
+
+    function calcBalance() {
+      const tot = Number(document.getElementById('cust-total').value) || 0;
+      const adv = Number(document.getElementById('cust-advance').value) || 0;
+      document.getElementById('cust-balance').value = Math.max(0, tot - adv);
+    }
+
+    function saveBooking(e) {
+      e.preventDefault();
+      const tot = Number(document.getElementById('cust-total').value);
+      const adv = Number(document.getElementById('cust-advance').value);
+      const newB = {
+        id: Date.now().toString().slice(-4),
+        name: document.getElementById('cust-name').value,
+        phone: document.getElementById('cust-phone').value,
+        date: document.getElementById('cust-date').value,
+        service: document.getElementById('cust-service').value,
+        total: tot,
+        advance: adv,
+        balance: Math.max(0, tot - adv),
+        status: 'Pending'
+      };
+      bookings.unshift(newB);
+      localStorage.setItem('studio_bookings', JSON.stringify(bookings));
+      document.getElementById('booking-form').reset();
+      showTab('bookings');
+    }
+
+    function addExpense(e) {
+      e.preventDefault();
+      const t = document.getElementById('exp-title').value;
+      const a = Number(document.getElementById('exp-amount').value);
+      expenses.unshift({ title: t, amount: a });
+      localStorage.setItem('studio_expenses', JSON.stringify(expenses));
+      document.getElementById('exp-title').value = '';
+      document.getElementById('exp-amount').value = '';
+      renderAll();
+    }
+
+    function openInvoice(id) {
+      const b = bookings.find(x => x.id == id);
+      if(!b) return;
+      document.getElementById('invoice-details').innerHTML = `
+        <p><strong>रसीद क्रं:</strong> #${b.id}</p>
+        <p><strong>ग्राहक:</strong> ${b.name} (${b.phone})</p>
+        <p><strong>इवेंट/सर्विस:</strong> ${b.service}</p>
+        <p><strong>तारीख:</strong> ${b.date}</p>
+        <hr class="my-2">
+        <div class="flex justify-between font-bold"><span>कुल राशि:</span> <span>₹${b.total}</span></div>
+        <div class="flex justify-between text-green-700"><span>जमा (एडवांस):</span> <span>₹${b.advance}</span></div>
+        <div class="flex justify-between text-red-600 font-black text-sm"><span>बकाया शेष:</span> <span>₹${b.balance}</span></div>
+      `;
+      document.getElementById('invoice-modal').classList.remove('hidden');
+    }
+
+    function closeInvoice() {
+      document.getElementById('invoice-modal').classList.add('hidden');
+    }
+
+    function renderAll() {
+      // Metrics
+      document.getElementById('stat-total-bookings').innerText = bookings.length;
+      document.getElementById('stat-editing').innerText = bookings.filter(b => b.status === 'Editing').length;
+      const totInc = bookings.reduce((sum, b) => sum + b.advance, 0);
+      const totPen = bookings.reduce((sum, b) => sum + b.balance, 0);
+      document.getElementById('stat-income').innerText = '₹' + totInc.toLocaleString();
+      document.getElementById('stat-pending').innerText = '₹' + totPen.toLocaleString();
+
+      // Recent Table
+      const recentHtml = bookings.slice(0, 5).map(b => `
+        <tr>
+          <td class="p-3 font-semibold">${b.name}</td>
+          <td class="p-3 text-xs text-gray-600">${b.service}</td>
+          <td class="p-3">${b.date}</td>
+          <td class="p-3 font-bold">₹${b.total}</td>
+          <td class="p-3 text-red-600 font-bold">₹${b.balance}</td>
+          <td class="p-3"><span class="px-2 py-1 text-xs rounded font-bold ${b.status==='Delivered'?'bg-green-100 text-green-800':'bg-yellow-100 text-yellow-800'}">${b.status}</span></td>
+        </tr>
+      `).join('');
+      document.getElementById('recent-bookings-list').innerHTML = recentHtml;
+
+      // All Bookings Table
+      const allHtml = bookings.map(b => `
+        <tr class="border-b hover:bg-gray-50">
+          <td class="p-3 font-mono text-xs">#${b.id}</td>
+          <td class="p-3"><strong>${b.name}</strong><br><span class="text-xs text-gray-500">${b.phone}</span></td>
+          <td class="p-3 text-xs">${b.service}</td>
+          <td class="p-3 text-xs">${b.date}</td>
+          <td class="p-3 font-bold">₹${b.total}</td>
+          <td class="p-3 text-green-700">₹${b.advance}</td>
+          <td class="p-3 text-red-600 font-bold">₹${b.balance}</td>
+          <td class="p-3"><span class="px-2 py-1 text-xs rounded font-bold bg-indigo-100 text-indigo-800">${b.status}</span></td>
+          <td class="p-3">
+            <button onclick="openInvoice('${b.id}')" class="bg-indigo-600 text-white px-2 py-1 rounded text-xs">रसीद</button>
+          </td>
+        </tr>
+      `).join('');
+      document.getElementById('all-bookings-list').innerHTML = allHtml;
+
+      // Rates
+      document.getElementById('rate-list-container').innerHTML = defaultRates.map(r => `
+        <div class="bg-white p-4 rounded shadow border-l-4 border-indigo-600">
+          <div class="flex justify-between items-center">
+            <h3 class="font-bold text-gray-800">${r.name}</h3>
+            <span class="text-indigo-600 font-black text-lg">${r.price}</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">${r.desc}</p>
+        </div>
+      `).join('');
+
+      // Expenses
+      document.getElementById('expense-ul').innerHTML = expenses.map(e => `
+        <li class="py-2 flex justify-between"><span>${e.title}</span><span class="font-bold text-red-600">₹${e.amount}</span></li>
+      `).join('');
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>
